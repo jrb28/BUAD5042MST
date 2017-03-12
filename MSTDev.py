@@ -11,8 +11,8 @@ import MySQLdb as mySQL
 R = 6371.0 * 0.621371
 
 """ global MySQL settings """
-mysql_user_name = 'your MySQL username'
-mysql_password = 'Your MySQL password'
+mysql_user_name = 'your MySQL username' #
+mysql_password = 'Your MySQL password'   #
 mysql_ip = '127.0.0.1'
 mysql_db = 'mst_dt'
 
@@ -133,8 +133,20 @@ def mst_algo(locs,dist):
 
 """ This is the main program """
 problems = getDBDataList1('CALL spGetProblemIds();')
+silent_mode = False
+""" Error Messages """
+error_locid = """ 
+A list was received from mst_algo() with tuples containing invalid location ids.   
+"""
+error_not_tuple = """ 
+A list was received from mst_algo() whose inner data structure does not contain tuples.   
+"""
+error_response_not_list = """
+mst_algo() returned a response whose outer data type was not a list.  Scoring will be terminated   """
+
 for problem_id in problems:
     locs = getDBDataList('CALL spGetProbData(%s);' % (str(problem_id)))
+    loc_ids = [x[0] for x in locs]
     
     """ Compute Haversine distances between all location pairs and insert results into dictionary dist """
     dist = {}
@@ -142,7 +154,51 @@ for problem_id in problems:
         for loc2 in range(loc1 + 1,len(locs)):
             dist[(locs[loc1][0],locs[loc2][0])] = hav_dist(locs[loc1][1],locs[loc1][2],locs[loc2][1],locs[loc2][2])
     
+    errors = False
+    mst = []
     name_or_team, mst = mst_algo(locs,dist)
+    
+    if isinstance(mst,list):
+        for link in mst:
+            if not isinstance(link,tuple):
+                errors = True
+                if silent_mode:
+                    status = "bad_tuples_in_list"
+                else:
+                    print error_not_tuple
+                break
+            else:
+                if not (link[0] in loc_ids and link[1] in loc_ids):
+                    errors = True
+                    if silent_mode:
+                        status = "bad_loc_id_"
+                    else:
+                        print error_locid
+                    break
+    else:
+        if silent_mode:
+            status = "P"+str(problem_id)+"_not_list_"
+        else:
+            print error_response_not_list    
+    
+    if errors == False:
+        mst_ok = mst_feasible(dist,mst)
+        if mst_ok:
+            mst_obj = mst_value(dist,mst)
+        else:
+            mst_obj = 9999999999
+        
+        if mst_ok:
+            if silent_mode:
+                status = "P"+str(problem_id)+"mst_valid_"
+            else:
+                print "MST Problem ", str(problem_id)," solution valid, distance =", mst_obj
+        else:
+            if silent_mode:
+                status = "P"+str(problem_id)+"mst_invalid_"
+            else:
+                print "MST Problem ", str(problem_id)," solution invalid ...."
+        
     print
     print "=========================================================="
     print "MST Problem", str(problem_id)
