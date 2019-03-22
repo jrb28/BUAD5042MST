@@ -202,4 +202,4 @@ for problem_id in problems:
     print('\n','==========================================================')
     print("MST Problem", str(problem_id))
     print(name_or_team, mst, mst_value(dist,mst))
-    print("MST feasible?", mst_feasible(dist,mst))
+    print("MST feasible?", mst_feasible(dist,mst),'\n\n')
