@@ -76,31 +76,29 @@ def mst_feasible(values,mst):
     else:
         return False
         
-def getDBDataList(proc,args):
+def getDBDataList(commandString):
     cnx = db_connect()
     cursor = cnx.cursor()
-    cursor.callproc(proc,args=args)
+    cursor.execute(commandString)
     items = []
-    for result in cursor.stored_results():
-        for row in result.fetchall():
-            new_row = []
-            for item in row:
-                new_row.append(item)
-            items.append(new_row)
-        break
+    x = cursor.fetchall()
+    for item in x:
+        new_row = []
+        for i in range(len(item)):
+            new_row.append(item[i])
+        items.append(new_row)
     cursor.close()
     cnx.close()
     return items
     
-def getDBDataList1(proc,args):
+def getDBDataList1(commandString):
     cnx = db_connect()
     cursor = cnx.cursor()
-    cursor.callproc(proc,args=args)
+    cursor.execute(commandString)
     items = []
-    for result in cursor.stored_results():
-        for item in result.fetchall():
-            items.append(item[0])
-        break
+    x = cursor.fetchall()
+    for item in x:
+        items.append(item[0])
     cursor.close()
     cnx.close()
     return items
@@ -127,14 +125,14 @@ def mst_algo(locs,dist):
     mst = []
 
     """
-    Put your MST algorithm code here
+    Insert your algorithm here
     """
             
     return name_or_team, mst
 
 
 """ This is the main program """
-problems = getDBDataList1('spGetProblemIds',[])
+problems = getDBDataList1('CALL spGetProblemIds();')
 silent_mode = False
 """ Error Messages """
 error_locid = """ 
@@ -147,7 +145,7 @@ error_response_not_list = """
 mst_algo() returned a response whose outer data type was not a list.  Scoring will be terminated   """
 
 for problem_id in problems:
-    locs = getDBDataList('spGetProbData',[problem_id])
+    locs = getDBDataList('CALL spGetProbData(%s);' % (str(problem_id)))
     loc_ids = [x[0] for x in locs]
     
     """ Compute Haversine distances between all location pairs and insert results into dictionary dist """
@@ -181,7 +179,7 @@ for problem_id in problems:
         if silent_mode:
             status = "P"+str(problem_id)+"_not_list_"
         else:
-            print(error_response_not_list   ) 
+            print(error_response_not_list)
     
     if errors == False:
         mst_ok = mst_feasible(dist,mst)
@@ -201,9 +199,7 @@ for problem_id in problems:
             else:
                 print("MST Problem ", str(problem_id)," solution invalid ....")
         
-    print ()
-    print("==========================================================")
+    print('\n','==========================================================')
     print("MST Problem", str(problem_id))
     print(name_or_team, mst, mst_value(dist,mst))
     print("MST feasible?", mst_feasible(dist,mst))
-    print()
